@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:arb_excel/src/assets.dart';
 import 'package:excel/excel.dart';
+import 'package:path/path.dart';
 
 import 'arb.dart';
 
@@ -27,13 +28,13 @@ void newTemplate(String filename) {
 /// from the template.
 Translation parseExcel({
   required String filename,
-  String sheetname = 'Text',
+  String? sheetName,
   int headerRow = _kRowHeader,
   int valueRow = _kRowValue,
 }) {
   final buf = File(filename).readAsBytesSync();
   final excel = Excel.decodeBytes(buf);
-  final sheet = excel.sheets[sheetname];
+  final sheet = excel.sheets[sheetName ?? excel.sheets.keys.first];
   if (sheet == null) {
     return Translation();
   }
@@ -45,13 +46,15 @@ Translation parseExcel({
     final item = ARBItem(
       category: row[_kColCategory]?.value?.toString(),
       text: row[_kColText]?.value?.toString() ?? '',
-      description: row[_kColDescription]?.value?.toString(),
+      description:
+          row[_kColDescription]?.value?.toString().replaceAll('\n', '\\n'),
       translations: {},
     );
 
     for (int i = _kColValue; i < sheet.maxCols; i++) {
       final lang = columns[i]?.value?.toString() ?? i.toString();
-      item.translations[lang] = row[i]?.value?.toString() ?? '';
+      item.translations[lang] =
+          row[i]?.value?.toString().replaceAll('\n', '\\n') ?? '';
     }
 
     items.add(item);
@@ -66,5 +69,30 @@ Translation parseExcel({
 
 /// Writes a Excel file, includes all translations.
 void writeExcel(String filename, Translation data) {
-  throw UnimplementedError();
+  final excel = Excel.createExcel();
+  //library creates one sheet by default
+  final sheetname = excel.sheets.keys.first;
+  final sheet = excel[sheetname];
+  final headerRow = ['category', 'text', 'description', ...data.languages];
+  sheet.appendRow(headerRow);
+  for (final item in data.items) {
+    final row = [
+      item.category ?? '',
+      item.text,
+      item.description ?? '',
+      ...data.languages.map((e) => item.translations[e] ?? '')
+    ];
+    sheet.appendRow(row);
+  }
+  final bytes = excel.save();
+  if (bytes == null) {
+    stdout.write('''
+        Error occurred while saving the excel file.\n
+        Do you have the necessary permissions?
+        ''');
+    return;
+  }
+
+  File('${withoutExtension(split(filename).last).split('_').first}.xlsx')
+      .writeAsBytesSync(bytes);
 }

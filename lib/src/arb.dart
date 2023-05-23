@@ -1,14 +1,67 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart';
 
 /// To match all args from a text.
 final _kRegArgs = RegExp(r'{(\w+)}');
+const _metaSymbol = '@';
+const _tab = '    ';
 
 /// Parses .arb files to [Translation].
 /// The [filename] is the main language.
-Translation parseARB(String filename) {
-  throw UnimplementedError();
+Translation parseARB(String folderPath) {
+  final folder = Directory(folderPath);
+  if (!folder.existsSync()) {
+    throw FileSystemException('Directory $folderPath does not exists');
+  }
+  final items = <ARBItem>[];
+  final languages = <String>{};
+  for (final entity in folder.listSync(followLinks: false)) {
+    if (entity is! File || !entity.path.endsWith('.arb')) continue;
+    final bytes = entity.readAsBytesSync();
+    final body = Utf8Decoder().convert(bytes);
+    final jsonBody = json.decode(body) as Map<String, dynamic>;
+    final textKeys =
+        jsonBody.keys.where((element) => !element.startsWith(_metaSymbol));
+    final language = withoutExtension(entity.path).split('_').last;
+    if (!languages.contains(language)) languages.add(language);
+    for (final textKey in textKeys) {
+      final text = jsonBody[textKey];
+      if (text is! String) continue;
+      String? description;
+      String? category;
+      final metadata = jsonBody[_metaSymbol + textKey];
+      if (metadata is Map<String, dynamic>) {
+        description = metadata['description'];
+        category = metadata['type'];
+      }
+      final indexExists = items.indexWhere((e) => e.text == textKey);
+      if (indexExists == -1) {
+        items.add(
+          ARBItem(
+            category: category,
+            text: textKey,
+            description: description,
+            translations: {
+              language: text,
+            },
+          ),
+        );
+      } else {
+        items[indexExists] = ARBItem(
+          category: items[indexExists].category ?? category,
+          text: textKey,
+          description: items[indexExists].description ?? description,
+          translations: {
+            language: text,
+            ...items[indexExists].translations,
+          },
+        );
+      }
+    }
+  }
+  return Translation(languages: languages.toList(), items: items);
 }
 
 /// Writes [Translation] to .arb files.
@@ -26,7 +79,7 @@ void writeARB(String filename, Translation data) {
       }
     }
 
-    buf = ['{', buf.join(',\n'), '}\n'];
+    buf = ['{', '$_tab"@@locale": "$lang",', buf.join(',\n'), '}\n'];
     f.writeAsStringSync(buf.join('\n'));
   }
 }
@@ -69,30 +122,30 @@ class ARBItem {
     final List<String> buf = [];
 
     if (hasMetadata) {
-      buf.add('  "$text": "$value",');
-      buf.add('  "@$text": {');
+      buf.add('$_tab"$text": "$value",');
+      buf.add('$_tab"@$text": {');
 
       if (args.isEmpty) {
         if (description != null) {
-          buf.add('    "description": "$description"');
+          buf.add('${_tab * 2}"description": "$description"');
         }
       } else {
         if (description != null) {
-          buf.add('    "description": "$description",');
+          buf.add('${_tab * 2}"description": "$description",');
         }
 
-        buf.add('    "placeholders": {');
+        buf.add('${_tab * 2}"placeholders": {');
         final List<String> group = [];
         for (final arg in args) {
-          group.add('      "$arg": {"type": "String"}');
+          group.add('${_tab * 3}"$arg": {"type": "String"}');
         }
         buf.add(group.join(',\n'));
-        buf.add('    }');
+        buf.add('${_tab * 2}}');
       }
 
-      buf.add('  }');
+      buf.add('$_tab}');
     } else {
-      buf.add('  "$text": "$value"');
+      buf.add('$_tab"$text": "$value"');
     }
 
     return buf.join('\n');
