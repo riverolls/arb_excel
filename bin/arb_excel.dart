@@ -6,73 +6,86 @@ import 'package:path/path.dart' as path;
 
 const _kVersion = '0.0.1';
 
+const _kCommands = {
+  'new': 'New translation sheet',
+  'excel': 'Import ARB files to sheet',
+  'arb': 'Export to ARB files',
+};
+
 void main(List<String> args) {
   final parse = ArgParser();
-  parse.addFlag(
-    'new',
-    abbr: 'n',
-    help: 'New translation sheet',
-  );
-  parse.addOption(
-    'arb',
-    abbr: 'a',
-    help: 'Export to ARB files',
-  );
-  parse.addOption(
-    'excel',
-    abbr: 'e',
-    help: 'Import ARB files to sheet',
-  );
+  for (var command in _kCommands.keys) {
+    parse.addCommand(command);
+  }
   parse.addOption(
     'out',
     abbr: 'o',
     help: 'Specify the output directory',
   );
+
   final flags = parse.parse(args);
 
-  if (flags.wasParsed('new')) {
-    final defOut = path.join(Directory.current.path, 'template.xlsx');
-    final out = flags['out'] ?? defOut;
-    stdout.writeln('Create new Excel file for translation: $out');
-    newTemplate(out);
-    exit(0);
-  }
-  if (flags.wasParsed('arb')) {
-    final input = flags['arb'];
-    final output = flags['out'] ??
-        path.join(
-          Directory.current.path,
-          '${path.basenameWithoutExtension(input)}.arb',
-        );
-    stdout.writeln('Generate ARB from: $input');
-    final data = parseExcel(filename: input);
-    writeARB(output, data);
-    exit(0);
+  switch (flags.command?.name) {
+    case 'new':
+      _handleNew(flags.command!);
+      return;
+    case 'excel':
+      _handleExcel(flags.command!);
+      return;
+    case 'arb':
+      _handleArb(flags.command!);
+      return;
   }
 
-  if (flags.wasParsed('excel')) {
-    final input = flags['excel'];
-    final output = flags['out'] ??
-        path.join(
-          Directory.current.path,
-          '${path.withoutExtension(input)}.xlsx',
-        );
-    stdout.writeln('Generate Excel from: $input');
-    final data = parseARB(input);
-    writeExcel(output, data);
-    exit(0);
-  }
-
-  usage(parse);
+  _usage(parse);
   exit(1);
 }
 
-void usage(ArgParser parse) {
+void _handleNew(ArgResults command) {
+  final defOut = path.join(Directory.current.path, 'template.xlsx');
+  final out = command['out'] ?? defOut;
+  stdout.writeln('Create new Excel file for translation: $out');
+  newTemplate(out);
+  exit(0);
+}
+
+void _handleExcel(ArgResults command) {
+  final input = command['excel'];
+  final output = command['out'] ??
+      path.join(
+        Directory.current.path,
+        '${path.withoutExtension(input)}.xlsx',
+      );
+  stdout.writeln('Generate Excel from: $input');
+  final data = parseARB(input);
+  writeExcel(output, data);
+  exit(0);
+}
+
+void _handleArb(ArgResults command) {
+  final input = command['arb'];
+  final output = command['out'] ??
+      path.join(
+        Directory.current.path,
+        '${path.basenameWithoutExtension(input)}.arb',
+      );
+  stdout.writeln('Generate ARB from: $input');
+  final data = parseExcel(filename: input);
+  writeARB(output, data);
+  exit(0);
+}
+
+void _usage(ArgParser parse) {
   stdout.writeln('arb_sheet v$_kVersion\n');
-  stdout.writeln('USAGE:');
   stdout.writeln(
-    '  arb_sheet [OPTIONS] path/to/file/name\n',
+    '  arb_sheet excel path/to/l10n/ -o path/to/output/l10n.xlsx\n',
   );
-  stdout.writeln('OPTIONS');
+  stdout.writeln('USAGE: arb_sheet <command> [arguments]\n');
+  stdout.writeln('Global options:');
   stdout.writeln(parse.usage);
+  stdout.writeln();
+  stdout.writeln('Available commands:');
+  _kCommands.forEach((command, des) {
+    stdout.writeln('  $command\t\t$des');
+  });
 }

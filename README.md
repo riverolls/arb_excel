@@ -19,6 +19,7 @@ OPTIONS
 -n, --new      New translation sheet
 -a, --arb      Export to ARB files
 -e, --excel    Import ARB files to sheet
+-o, --out      Specify the output directory
 ```
 
 Creates a XLSX template file.

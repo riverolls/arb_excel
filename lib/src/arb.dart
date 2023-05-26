@@ -6,7 +6,7 @@ import 'package:path/path.dart';
 /// To match all args from a text.
 final _kRegArgs = RegExp(r'{(\w+)}');
 const _metaSymbol = '@';
-const _tab = '    ';
+const _tab = '  ';
 
 /// Parses .arb files to [Translation].
 /// The [filename] is the main language.
@@ -24,7 +24,8 @@ Translation parseARB(String folderPath) {
     final jsonBody = json.decode(body) as Map<String, dynamic>;
     final textKeys =
         jsonBody.keys.where((element) => !element.startsWith(_metaSymbol));
-    final language = withoutExtension(entity.path).split('_').last;
+    final language = jsonBody['@@locale'] as String? ??
+        withoutExtension(entity.path).split('_').last;
     if (!languages.contains(language)) languages.add(language);
     for (final textKey in textKeys) {
       final text = jsonBody[textKey];
