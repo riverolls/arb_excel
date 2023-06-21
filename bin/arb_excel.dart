@@ -22,7 +22,7 @@ void main(List<String> args) {
     final newCommand = parser.addCommand(command);
     newCommand.addOption('input',abbr:'i',help:'Input file or directory');
     newCommand.addOption('output',abbr:'o',help:'Output directory');
-    newCommand.addOption('default',abbr:'d',help:'Default language',defaultsTo: 'hk');
+    newCommand.addOption('default',abbr:'d',help:'Default language',defaultsTo: 'en');
   }
   // parse.addOption(
   //   'out',
