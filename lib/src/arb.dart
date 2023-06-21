@@ -32,10 +32,14 @@ Translation parseARB(String folderPath) {
       if (text is! String) continue;
       String? description;
       String? category;
+      String? placeholders;
       final metadata = jsonBody[_metaSymbol + textKey];
       if (metadata is Map<String, dynamic>) {
         description = metadata['description'];
         category = metadata['type'];
+        if(metadata.containsKey('placeholders')) {
+          placeholders = json.encode(metadata['placeholders']);
+        }
       }
       final indexExists = items.indexWhere((e) => e.text == textKey);
       if (indexExists == -1) {
@@ -44,6 +48,7 @@ Translation parseARB(String folderPath) {
             category: category,
             text: textKey,
             description: description,
+            placeholders: placeholders,
             translations: {
               language: text,
             },
@@ -54,6 +59,7 @@ Translation parseARB(String folderPath) {
           category: items[indexExists].category ?? category,
           text: textKey,
           description: items[indexExists].description ?? description,
+          placeholders: items[indexExists].placeholders ?? placeholders,
           translations: {
             language: text,
             ...items[indexExists].translations,
@@ -66,16 +72,24 @@ Translation parseARB(String folderPath) {
 }
 
 /// Writes [Translation] to .arb files.
-void writeARB(String filename, Translation data) {
+void writeARB(String filename, Translation data, String defaultLang) {
+  bool hasDefault = false;
+  for(final lang in data.languages){
+    if(defaultLang == lang){
+      hasDefault = true;
+      break;
+    }
+  }
   for (var i = 0; i < data.languages.length; i++) {
     final lang = data.languages[i];
-    final isDefault = i == 0;
-    final f = File('${withoutExtension(filename)}_$lang.arb');
+    final isDefault = hasDefault ? lang == defaultLang : i == 0;
+
+    final f = File('${withoutExtension(filename)}intl_$lang.arb');
 
     var buf = [];
     for (final item in data.items) {
-      final data = item.toJSON(lang, isDefault);
-      if (data != null) {
+      final jsonData = item.toJSON(lang, isDefault);
+      if (jsonData != null) {
         buf.add(item.toJSON(lang, isDefault));
       }
     }
@@ -105,9 +119,11 @@ class ARBItem {
     required this.text,
     this.description,
     this.translations = const {},
+    this.placeholders,
   });
 
   final String? category;
+  final String? placeholders;
   final String text;
   final String? description;
   final Map<String, String> translations;
@@ -134,14 +150,20 @@ class ARBItem {
         if (description != null) {
           buf.add('${_tab * 2}"description": "$description",');
         }
-
-        buf.add('${_tab * 2}"placeholders": {');
-        final List<String> group = [];
-        for (final arg in args) {
-          group.add('${_tab * 3}"$arg": {"type": "String"}');
+        if(placeholders != null) {
+          final map = json.decode(placeholders!);
+          // 将map中的key和value都加上双引号
+          final Map<String, dynamic> newMap = quoteKeyValue(map);
+          buf.add('${_tab * 2}"placeholders": $newMap');
         }
-        buf.add(group.join(',\n'));
-        buf.add('${_tab * 2}}');
+
+        // buf.add('${_tab * 2}"placeholders": {');
+        // final List<String> group = [];
+        // for (final arg in args) {
+        //   group.add('${_tab * 3}"$arg": {"type": "String"}');
+        // }
+        // buf.add(group.join(',\n'));
+        // buf.add('${_tab * 2}}');
       }
 
       buf.add('$_tab}');
@@ -151,6 +173,19 @@ class ARBItem {
 
     return buf.join('\n');
   }
+}
+
+Map<String,dynamic> quoteKeyValue(Map map){
+  Map<String,dynamic> newMap = {};
+  map.forEach((key,value){
+    if(value is String) {
+      newMap['"$key"'] = '"$value"';
+    }
+    else if(value is Map){
+      newMap['"$key"'] = quoteKeyValue(value);
+    }
+  });
+  return newMap;
 }
 
 /// Describes all arb records.

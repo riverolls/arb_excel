@@ -13,18 +13,24 @@ const _kCommands = {
 };
 
 void main(List<String> args) {
-  final parse = ArgParser();
+  final parser = ArgParser();
+  // parse.addOption('new', abbr: 'n', help: 'Create new Excel template');
+  // parse.addOption('excel', abbr: 'e', help: 'Import ARB files to sheet');
+  // parse.addOption('arb', abbr: 'a', help: 'Export to ARB files');
+  // parse.addOption('out', abbr: 'o', help: 'Specify the output directory');
   for (var command in _kCommands.keys) {
-    parse.addCommand(command);
+    final newCommand = parser.addCommand(command);
+    newCommand.addOption('input',abbr:'i',help:'Input file or directory');
+    newCommand.addOption('output',abbr:'o',help:'Output directory');
+    newCommand.addOption('default',abbr:'d',help:'Default language',defaultsTo: 'hk');
   }
-  parse.addOption(
-    'out',
-    abbr: 'o',
-    help: 'Specify the output directory',
-  );
+  // parse.addOption(
+  //   'out',
+  //   abbr: 'o',
+  //   help: 'Specify the output directory',
+  // );
 
-  final flags = parse.parse(args);
-
+  final flags = parser.parse(args);
   switch (flags.command?.name) {
     case 'new':
       _handleNew(flags.command!);
@@ -37,7 +43,7 @@ void main(List<String> args) {
       return;
   }
 
-  _usage(parse);
+  _usage(parser);
   exit(1);
 }
 
@@ -50,11 +56,11 @@ void _handleNew(ArgResults command) {
 }
 
 void _handleExcel(ArgResults command) {
-  final input = command['excel'];
-  final output = command['out'] ??
+  final input = command['input'];
+  final output = command['output'] ??
       path.join(
         Directory.current.path,
-        '${path.withoutExtension(input)}.xlsx',
+        '${path.withoutExtension(input)}l10n.xlsx',
       );
   stdout.writeln('Generate Excel from: $input');
   final data = parseARB(input);
@@ -63,22 +69,23 @@ void _handleExcel(ArgResults command) {
 }
 
 void _handleArb(ArgResults command) {
-  final input = command['arb'];
-  final output = command['out'] ??
+  final input = command['input'];
+  final output = command['output'] ??
       path.join(
         Directory.current.path,
         '${path.basenameWithoutExtension(input)}.arb',
       );
+  final String isDefault = command['default'];
   stdout.writeln('Generate ARB from: $input');
   final data = parseExcel(filename: input);
-  writeARB(output, data);
+  writeARB(output, data,isDefault);
   exit(0);
 }
 
 void _usage(ArgParser parse) {
   stdout.writeln('arb_sheet v$_kVersion\n');
   stdout.writeln(
-    '  arb_sheet excel path/to/l10n/ -o path/to/output/l10n.xlsx\n',
+    '  arb_sheet excel -i path/to/arbs/ -o path/to/output/l10n.xlsx\n',
   );
   stdout.writeln('USAGE: arb_sheet <command> [arguments]\n');
   stdout.writeln('Global options:');

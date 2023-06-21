@@ -12,7 +12,8 @@ const _kRowValue = 1;
 const _kColCategory = 0;
 const _kColText = 1;
 const _kColDescription = 2;
-const _kColValue = 3;
+const _kColPlaceholders = 3;
+const _kColValue = 4;
 
 /// Create a new Excel template file.
 ///
@@ -43,11 +44,13 @@ Translation parseExcel({
   final columns = sheet.rows[headerRow];
   for (int i = valueRow; i < sheet.rows.length; i++) {
     final row = sheet.rows[i];
+    final placeholders = row[_kColPlaceholders]?.value?.toString();
     final item = ARBItem(
       category: row[_kColCategory]?.value?.toString(),
       text: row[_kColText]?.value?.toString() ?? '',
       description:
           row[_kColDescription]?.value?.toString().replaceAll('\n', '\\n'),
+      placeholders: placeholders,
       translations: {},
     );
 
@@ -73,17 +76,20 @@ void writeExcel(String filename, Translation data) {
   //library creates one sheet by default
   final sheetname = excel.sheets.keys.first;
   final sheet = excel[sheetname];
-  final headerRow = ['category', 'text', 'description', ...data.languages];
+  final headerRow = ['category', 'text', 'description','placeholders', ...data.languages];
   sheet.appendRow(headerRow);
   for (final item in data.items) {
     final row = [
       item.category ?? '',
       item.text,
       item.description ?? '',
+      item.placeholders ?? '',
       ...data.languages.map((e) => item.translations[e] ?? '')
     ];
     sheet.appendRow(row);
   }
+  // 隐藏列名为 category 的列
+  sheet.setColWidth(3, 0);
   final bytes = excel.save();
   if (bytes == null) {
     stdout.write('''
@@ -93,6 +99,6 @@ void writeExcel(String filename, Translation data) {
     return;
   }
 
-  File('${withoutExtension(split(filename).last).split('_').first}.xlsx')
+  File(filename)
       .writeAsBytesSync(bytes);
 }
