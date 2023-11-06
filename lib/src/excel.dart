@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:arb_excel/src/assets.dart';
 import 'package:excel/excel.dart';
-import 'package:path/path.dart';
 
 import 'arb.dart';
 
@@ -88,7 +87,7 @@ void writeExcel(String filename, Translation data) {
     ];
     sheet.appendRow(row);
   }
-  // 隐藏列名为 category 的列
+  // 隐藏第 4 列
   sheet.setColWidth(3, 0);
   final bytes = excel.save();
   if (bytes == null) {
@@ -98,7 +97,9 @@ void writeExcel(String filename, Translation data) {
         ''');
     return;
   }
-
-  File(filename)
-      .writeAsBytesSync(bytes);
+  File output = File(filename);
+  if(!output.existsSync()){
+    output.createSync(recursive: true);
+  }
+  output.writeAsBytesSync(bytes);
 }
