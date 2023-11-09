@@ -23,7 +23,7 @@ Translation parseARB(String folderPath) {
     final body = Utf8Decoder().convert(bytes);
     final jsonBody = json.decode(body) as Map<String, dynamic>;
     final textKeys =
-        jsonBody.keys.where((element) => !element.startsWith(_metaSymbol));
+    jsonBody.keys.where((element) => !element.startsWith(_metaSymbol));
     final language = jsonBody['@@locale'] as String? ??
         withoutExtension(entity.path).split('_').last;
     if (!languages.contains(language)) languages.add(language);
@@ -37,8 +37,8 @@ Translation parseARB(String folderPath) {
       if (metadata is Map<String, dynamic>) {
         description = metadata['description'];
         category = metadata['type'];
-        if(metadata.containsKey('placeholders')) {
-          placeholders = json.encode(metadata['placeholders']);
+        if (metadata.containsKey('placeholders')) {
+          placeholders = json.encode(metadata['placeholders']).trim();
         }
       }
       final indexExists = items.indexWhere((e) => e.text == textKey);
@@ -74,8 +74,8 @@ Translation parseARB(String folderPath) {
 /// Writes [Translation] to .arb files.
 void writeARB(String filename, Translation data, String defaultLang) {
   bool hasDefault = false;
-  for(final lang in data.languages){
-    if(defaultLang == lang){
+  for (final lang in data.languages) {
+    if (defaultLang == lang) {
       hasDefault = true;
       break;
     }
@@ -85,6 +85,9 @@ void writeARB(String filename, Translation data, String defaultLang) {
     final isDefault = hasDefault ? lang == defaultLang : i == 0;
 
     final f = File('${withoutExtension(filename)}intl_$lang.arb');
+    if (!f.existsSync()) {
+      f.createSync(recursive: true);
+    }
 
     var buf = [];
     for (final item in data.items) {
@@ -128,6 +131,19 @@ class ARBItem {
   final String? description;
   final Map<String, String> translations;
 
+  /// 将 value 的特殊符号转义
+  String convertValue(String text) {
+    // 匹配双引号
+    var result = '';
+    final reg1 = RegExp(r'"');
+    for (var i = 0; i < text.length; i++) {
+      var char = text[i];
+      char = char.replaceAll(reg1, '\\"');
+      result += char;
+    }
+    return result;
+  }
+
   /// Serialize in JSON.
   String? toJSON(String lang, [bool isDefault = false]) {
     final value = translations[lang];
@@ -139,22 +155,30 @@ class ARBItem {
     final List<String> buf = [];
 
     if (hasMetadata) {
-      buf.add('$_tab"$text": "$value",');
+      buf.add('$_tab"$text": "${convertValue(value)}",');
       buf.add('$_tab"@$text": {');
-
       if (args.isEmpty) {
         if (description != null) {
+          // 不存在参数，description 后不需要加逗号
           buf.add('${_tab * 2}"description": "$description"');
         }
       } else {
         if (description != null) {
-          buf.add('${_tab * 2}"description": "$description",');
+          // 存在参数，并且 placeholders 不为空，description 后需要加逗号
+          if (placeholders != null && placeholders!.trim().isNotEmpty) {
+            buf.add('${_tab * 2}"description": "$description",');
+          } else {
+            buf.add('${_tab * 2}"description": "$description"');
+          }
         }
-        if(placeholders != null) {
+        if (placeholders != null && placeholders!.isNotEmpty) {
           final map = json.decode(placeholders!);
           // 将map中的key和value都加上双引号
           final Map<String, dynamic> newMap = quoteKeyValue(map);
           buf.add('${_tab * 2}"placeholders": $newMap');
+        } else {
+          print(
+              'text = $text 存在参数$args, 但是没有填写 placeholders, 需要填写 placeholders 为 $args 添加描述信息');
         }
 
         // buf.add('${_tab * 2}"placeholders": {');
@@ -175,13 +199,12 @@ class ARBItem {
   }
 }
 
-Map<String,dynamic> quoteKeyValue(Map map){
-  Map<String,dynamic> newMap = {};
-  map.forEach((key,value){
-    if(value is String) {
+Map<String, dynamic> quoteKeyValue(Map map) {
+  Map<String, dynamic> newMap = {};
+  map.forEach((key, value) {
+    if (value is String) {
       newMap['"$key"'] = '"$value"';
-    }
-    else if(value is Map){
+    } else if (value is Map) {
       newMap['"$key"'] = quoteKeyValue(value);
     }
   });
