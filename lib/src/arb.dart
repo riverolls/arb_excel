@@ -192,7 +192,7 @@ class ARBItem {
 
       buf.add('$_tab}');
     } else {
-      buf.add('$_tab"$text": "$value"');
+      buf.add('$_tab"$text": "${convertValue(value)}"');
     }
 
     return buf.join('\n');
