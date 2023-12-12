@@ -150,7 +150,7 @@ class ARBItem {
     if (value == null || value.isEmpty) return null;
 
     final args = getArgs(value);
-    final hasMetadata = isDefault && (args.isNotEmpty || description != null);
+    final hasMetadata = isDefault && (args.isNotEmpty || (description?.isNotEmpty ?? false));
 
     final List<String> buf = [];
 
@@ -158,12 +158,12 @@ class ARBItem {
       buf.add('$_tab"$text": "${convertValue(value)}",');
       buf.add('$_tab"@$text": {');
       if (args.isEmpty) {
-        if (description != null) {
+        if (description != null && description!.isNotEmpty) {
           // 不存在参数，description 后不需要加逗号
           buf.add('${_tab * 2}"description": "$description"');
         }
       } else {
-        if (description != null) {
+        if (description != null && description!.isNotEmpty) {
           // 存在参数，并且 placeholders 不为空，description 后需要加逗号
           if (placeholders != null && placeholders!.trim().isNotEmpty) {
             buf.add('${_tab * 2}"description": "$description",');
@@ -171,7 +171,7 @@ class ARBItem {
             buf.add('${_tab * 2}"description": "$description"');
           }
         }
-        if (placeholders != null && placeholders!.isNotEmpty) {
+        if (placeholders != null && placeholders!.trim().isNotEmpty) {
           final map = json.decode(placeholders!);
           // 将map中的key和value都加上双引号
           final Map<String, dynamic> newMap = quoteKeyValue(map);
