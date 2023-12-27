@@ -20,26 +20,34 @@ void main(List<String> args) {
   // parse.addOption('out', abbr: 'o', help: 'Specify the output directory');
   for (var command in _kCommands.keys) {
     final newCommand = parser.addCommand(command);
-    newCommand.addOption('input',abbr:'i',help:'Input file or directory');
-    newCommand.addOption('output',abbr:'o',help:'Output directory');
-    newCommand.addOption('default',abbr:'d',help:'Default language',defaultsTo: 'en');
+    newCommand.addOption(
+      'input',
+      abbr: 'i',
+      help: 'Input file or directory',
+    );
+    newCommand.addOption(
+      'output',
+      abbr: 'o',
+      help: 'Output directory',
+    );
+    newCommand.addOption(
+      'default',
+      abbr: 'd',
+      help: 'Default language',
+      defaultsTo: 'en',
+    );
   }
-  // parse.addOption(
-  //   'out',
-  //   abbr: 'o',
-  //   help: 'Specify the output directory',
-  // );
 
   final flags = parser.parse(args);
   switch (flags.command?.name) {
     case 'new':
-      _handleNew(flags.command!);
+      _handleExportTemplateExcel(flags.command!);
       return;
     case 'excel':
-      _handleExcel(flags.command!);
+      _handleExportExcel(flags.command!);
       return;
     case 'arb':
-      _handleArb(flags.command!);
+      _handleExportArb(flags.command!);
       return;
   }
 
@@ -47,7 +55,8 @@ void main(List<String> args) {
   exit(1);
 }
 
-void _handleNew(ArgResults command) {
+/// 处理导出 Excel 模板
+void _handleExportTemplateExcel(ArgResults command) {
   final defOut = path.join(Directory.current.path, 'template.xlsx');
   final out = command['out'] ?? defOut;
   stdout.writeln('Create new Excel file for translation: $out');
@@ -55,30 +64,35 @@ void _handleNew(ArgResults command) {
   exit(0);
 }
 
-void _handleExcel(ArgResults command) {
+/// 处理导出 Excel
+void _handleExportExcel(ArgResults command) {
   final input = command['input'];
   final output = command['output'] ??
       path.join(
         Directory.current.path,
         '${path.withoutExtension(input)}l10n.xlsx',
       );
+  // 默认语言
+  final String defaultLanguage = command['default'];
   stdout.writeln('Generate Excel from: $input');
-  final data = parseARB(input);
+  final data = parseARB(input, defaultLanguage);
   writeExcel(output, data);
   exit(0);
 }
 
-void _handleArb(ArgResults command) {
+/// 处理导出 arb
+void _handleExportArb(ArgResults command) {
   final input = command['input'];
   final output = command['output'] ??
       path.join(
         Directory.current.path,
         '${path.basenameWithoutExtension(input)}.arb',
       );
-  final String isDefault = command['default'];
+  // 默认语言
+  final String defaultLanguage = command['default'];
   stdout.writeln('Generate ARB from: $input');
   final data = parseExcel(filename: input);
-  writeARB(output, data,isDefault);
+  writeARB(output, data, defaultLanguage);
   exit(0);
 }
 

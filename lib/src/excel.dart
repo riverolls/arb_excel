@@ -46,7 +46,7 @@ Translation parseExcel({
     final placeholders = row[_kColPlaceholders]?.value?.toString();
     final item = ARBItem(
       category: row[_kColCategory]?.value?.toString(),
-      text: row[_kColText]?.value?.toString() ?? '',
+      key: row[_kColText]?.value?.toString() ?? '',
       description:
           row[_kColDescription]?.value?.toString().replaceAll('\n', '\\n'),
       placeholders: placeholders,
@@ -80,7 +80,7 @@ void writeExcel(String filename, Translation data) {
   for (final item in data.items) {
     final row = [
       item.category ?? '',
-      item.text,
+      item.key,
       item.description ?? '',
       item.placeholders ?? '',
       ...data.languages.map((e) => item.translations[e] ?? '')
