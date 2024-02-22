@@ -57,6 +57,8 @@ Translation parseExcel({
       final lang = columns[i]?.value?.toString() ?? i.toString();
       item.translations[lang] =
           row[i]?.value?.toString().replaceAll('\n', '\\n') ?? '';
+      item.translations[lang] =
+          row[i]?.value?.toString().replaceAll('\t', '\\t') ?? '';
     }
 
     items.add(item);
