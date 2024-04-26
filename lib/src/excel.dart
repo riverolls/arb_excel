@@ -52,13 +52,12 @@ Translation parseExcel({
       placeholders: placeholders,
       translations: {},
     );
-
     for (int i = _kColValue; i < sheet.maxCols; i++) {
       final lang = columns[i]?.value?.toString() ?? i.toString();
-      item.translations[lang] =
-          row[i]?.value?.toString().replaceAll('\n', '\\n') ?? '';
-      item.translations[lang] =
-          row[i]?.value?.toString().replaceAll('\t', '\\t') ?? '';
+      String val = row[i]?.value?.toString() ?? '';
+      val = val.replaceAll("\n", '\\n');
+      val = val.replaceAll("\t", "\\t");
+      item.translations.update(lang, (value) => val, ifAbsent: () => val);
     }
 
     items.add(item);

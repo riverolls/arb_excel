@@ -146,8 +146,8 @@ class ARBItem {
     this.category,
     required this.key,
     this.description,
-    this.translations = const {},
     this.placeholders,
+    required this.translations,
   });
 
   final String? category;
